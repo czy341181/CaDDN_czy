@@ -38,7 +38,7 @@ Please download [KITTI dataset](http://www.cvlibs.net/datasets/kitti/eval_object
 #ROOT
   |data/
     |KITTI/
-      |ImageSets/ [already provided in this repo]
+      |ImageSets/
       |object/			
         |training/
           |calib/
@@ -58,7 +58,7 @@ Move to the workplace and train the network:
 ```sh
  cd #ROOT
  cd experiments/example
- CUDA_VISIBLE_DEVICES=0 python ../../tools/train_val.py kitti_example.yaml
+ CUDA_VISIBLE_DEVICES=0 python ../../tools/train_val.py --config kitti_example.yaml
 ```
 
 [comment]: <> (### Plan)
