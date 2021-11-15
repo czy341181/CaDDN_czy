@@ -1,0 +1,147 @@
+random_seed: 444
+
+dataset:
+  type: &dataset_type 'KITTI'
+  batch_size: 4
+  writelist: ['Car', 'Pedestrian', 'Cyclist']
+  pc_range: [  2.,   -30.08,  -3.,    46.8,   30.08,   1.  ]
+
+model:
+  type: 'CaDDN'
+  pc_range: [  2.,   -30.08,  -3.,    46.8,   30.08,   1.  ]
+  grid_size: [280, 376, 25]
+  class_names: [ 'Car', 'Pedestrian', 'Cyclist' ]
+  depth_ffe:
+    DDN:
+      name: 'DDNDeepLabV3'
+      backbone: 'ResNet101'
+      feat_extract_layer: 'layer1'
+      pretrained_path: '/root/data/czy/czy_code/CaDDN/checkpoints/deeplabv3_resnet101_coco-586e9e4e.pth'
+    CHANNEL_REDUCE:
+      in_channels: 256
+      out_channels: 64
+      kernel_size: 1
+      stride: 1
+      bias: False
+    DISCRETIZE:
+      mode: 'LID'
+      num_bins: 80
+      depth_min: 2.0
+      depth_max: 46.8
+    DDN_LOSS:
+      weight: 3.0
+      alpha: 0.25
+      gamma: 2.0
+      fg_weight: 13
+      bg_weight: 1
+
+  frustum_to_voxel:
+    SAMPLER:
+      mode: 'bilinear'
+      padding_mode: 'zeros'
+    DISCRETIZE:
+      mode: 'LID'
+      num_bins: 80
+      depth_min: 2.0
+      depth_max: 46.8
+
+  conv2dcollapse:
+    num_bev_features: 64
+    ARGS:
+      kernel_size: 1
+      stride: 1
+      bias: False
+
+  basebevbackbone:
+    input_channels: 64
+    layer_nums: [10, 10, 10]
+    layer_strides: [2, 2, 2]
+    num_filters: [64, 128, 256]
+    upsample_strides: [1, 2, 4]
+    num_upsample_filters: [128, 128, 128]
+
+  anchorhead:
+    input_channels: 384
+    predict_boxes_when_training: False
+    class_agnostic: False
+    use_direction_classifier: True
+    dir_offset: 0.78539
+    dir_limit_offset: 0.0
+    num_dir_bins: 2
+    use_multihead: False
+    ANCHOR_GENERATOR_CONFIG: [
+      {
+        'class_name': 'Car',
+        'anchor_sizes': [ [ 3.9, 1.6, 1.56 ] ],
+        'anchor_rotations': [ 0, 1.57 ],
+        'anchor_bottom_heights': [ -1.78 ],
+        'align_center': False,
+        'feature_map_stride': 2,
+        'matched_threshold': 0.6,
+        'unmatched_threshold': 0.45
+      },
+      {
+        'class_name': 'Pedestrian',
+        'anchor_sizes': [ [ 0.8, 0.6, 1.73 ] ],
+        'anchor_rotations': [ 0, 1.57 ],
+        'anchor_bottom_heights': [ -0.6 ],
+        'align_center': False,
+        'feature_map_stride': 2,
+        'matched_threshold': 0.5,
+        'unmatched_threshold': 0.35
+      },
+      {
+        'class_name': 'Cyclist',
+        'anchor_sizes': [ [ 1.76, 0.6, 1.73 ] ],
+        'anchor_rotations': [ 0, 1.57 ],
+        'anchor_bottom_heights': [ -0.6 ],
+        'align_center': False,
+        'feature_map_stride': 2,
+        'matched_threshold': 0.5,
+        'unmatched_threshold': 0.35
+      }
+    ]
+    TARGET_ASSIGNER_CONFIG:
+                NAME: AxisAlignedTargetAssigner
+                POS_FRACTION: -1.0
+                SAMPLE_SIZE: 512
+                NORM_BY_NUM_EXAMPLES: False
+                MATCH_HEIGHT: False
+                BOX_CODER: ResidualCoder
+                BOX_CODER_CONFIG: {}
+
+    LOSS_CONFIG:
+      LOSS_WEIGHTS: {
+                    'cls_weight': 1.0,
+                    'loc_weight': 2.0,
+                    'dir_weight': 0.2,
+                    'code_weights': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                }
+
+optimizer:
+  type: 'adam_onecycle'
+  lr: 0.001
+  weight_decay: 0.01
+  momentum: 0.9
+  moms: [0.95, 0.85]
+  pct_start: 0.4
+  div_factor: 10
+  decay_step_list: [35, 45]
+  lr_decay: 0.1
+  lr_clip: 1e-07
+  lr_warmup: False
+  warmup_epoch: 1
+
+trainer:
+  max_epoch: 80
+  gpu_ids: 2,3
+  save_frequency: 1 # checkpoint save interval (in epoch)
+  #resume_model: '/root/data/czy/czy_code/CaDDN/experiments/example/checkpoints/checkpoint_epoch_20.pth'
+
+
+tester:
+  type: *dataset_type
+  mode: single   # 'single' or 'all'
+  checkpoint: 'checkpoints/checkpoint_epoch_80.pth'  # for 'single' mode
+  checkpoints_dir: 'checkpoints'  # for 'all' model
+  threshold: 0.2  # confidence filter
