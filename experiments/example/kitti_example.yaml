@@ -133,15 +133,18 @@ optimizer:
   warmup_epoch: 1
 
 trainer:
+  sync_bn: False
+  output_path: 'rgb_outputs/data'
   max_epoch: 80
   gpu_ids: 2,3
   save_frequency: 1 # checkpoint save interval (in epoch)
-  #resume_model: '/root/data/czy/czy_code/CaDDN/experiments/example/checkpoints/checkpoint_epoch_20.pth'
+  #resume_model: '/data1/czy/3D/czy_code/CaDDN_czy/experiments/example/checkpoints/checkpoint_epoch_63.pth'
 
 
 tester:
   type: *dataset_type
-  mode: single   # 'single' or 'all'
+  output_path: 'rgb_outputs/data'
+  mode: all   # 'single' or 'all'
   checkpoint: 'checkpoints/checkpoint_epoch_80.pth'  # for 'single' mode
   checkpoints_dir: 'checkpoints'  # for 'all' model
   threshold: 0.2  # confidence filter

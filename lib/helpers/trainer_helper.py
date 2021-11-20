@@ -44,8 +44,11 @@ class Trainer(object):
                  test_loader,
                  lr_scheduler,
                  warmup_lr_scheduler,
-                 logger):
+                 logger,
+                 args
+                 ):
         self.cfg = cfg
+        self.args = args
         self.model = model
         self.optimizer = optimizer
         self.train_loader = train_loader
@@ -55,7 +58,7 @@ class Trainer(object):
         self.logger = logger
         self.epoch = 0
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+        self.model = self.model.cuda()
         # loading pretrain/resume model
         if cfg.get('pretrain_model'):
             assert os.path.exists(cfg['pretrain_model'])
@@ -74,8 +77,14 @@ class Trainer(object):
                                          logger=self.logger)
             self.lr_scheduler.last_epoch = self.epoch - 1
 
-        #self.gpu_ids = list(map(int, cfg['gpu_ids'].split(',')))
-        self.model = torch.nn.DataParallel(self.model).cuda()
+        if cfg['sync_bn'] == True:
+            self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model)
+
+        ## DDP
+        self.model = torch.nn.parallel.DistributedDataParallel(
+            self.model, device_ids=[self.args.local_rank], find_unused_parameters=True)
+
+        #self.model = torch.nn.DataParallel(self.model).cuda()
 
 
 
@@ -99,10 +108,12 @@ class Trainer(object):
 
 
             # save trained model
-            if (self.epoch % self.cfg['save_frequency']) == 0:
+            if (self.epoch>60) and (self.epoch % self.cfg['save_frequency']) == 0:
                 os.makedirs('checkpoints', exist_ok=True)
                 ckpt_name = os.path.join('checkpoints', 'checkpoint_epoch_%d' % self.epoch)
-                save_checkpoint(get_checkpoint_state(self.model, self.optimizer, self.epoch), ckpt_name)
+
+                if self.args.local_rank == 0:
+                    save_checkpoint(get_checkpoint_state(self.model, self.optimizer, self.epoch), ckpt_name)
                 #self.inference()
 
             progress_bar.update()
@@ -164,11 +175,11 @@ class Trainer(object):
         dataset = self.test_loader.dataset
         class_names = dataset.class_name
 
-        output_path = '/root/data/czy/czy_code/CaDDN/experiments/example/rgb_outputs/data'
+        output_path = self.cfg['output_path']
 
         if os.path.exists(output_path):
             shutil.rmtree(output_path, True)
-        os.makedirs(output_path, exist_ok=False)
+        os.makedirs(output_path, exist_ok=True)
         with torch.no_grad():
             progress_bar = tqdm.tqdm(total=len(self.test_loader), leave=True, desc='Evaluation Progress')
             for batch_idx, inputs in enumerate(self.test_loader):

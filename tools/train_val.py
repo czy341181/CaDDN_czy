@@ -8,6 +8,7 @@ sys.path.append(ROOT_DIR)
 import yaml
 import argparse
 import datetime
+import torch
 
 from lib.helpers.model_helper import build_model
 from lib.helpers.dataloader_helper import build_dataloader
@@ -16,12 +17,13 @@ from lib.helpers.scheduler_helper import build_scheduler
 from lib.helpers.trainer_helper import Trainer
 from lib.helpers.tester_helper import Tester
 from lib.helpers.utils_helper import create_logger
-from lib.helpers.utils_helper import set_random_seed
+from lib.helpers.utils_helper import init_dist_pytorch, set_random_seed
 
 
 parser = argparse.ArgumentParser(description='End-to-End Monocular 3D Object Detection')
 parser.add_argument('--config', dest='config', help='settings of detection in yaml format')
 parser.add_argument('-e', '--evaluate_only', action='store_true', default=False, help='evaluation only')
+parser.add_argument('--local_rank', type=int, default=0, help='local rank for distributed training')
 
 args = parser.parse_args()
 
@@ -34,9 +36,9 @@ def main():
     log_file = 'train.log.%s' % datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     logger = create_logger(log_file)
 
-
+    num_gpus= init_dist_pytorch(args)
     # build dataloader
-    train_loader, test_loader  = build_dataloader(cfg['dataset'])
+    train_loader, test_loader  = build_dataloader(cfg['dataset'], num_gpus)
 
     # build model
     model = build_model(cfg['model'])
@@ -69,15 +71,17 @@ def main():
                       test_loader=test_loader,
                       lr_scheduler=lr_scheduler,
                       warmup_lr_scheduler=lr_warmup_scheduler,
-                      logger=logger)
+                      logger=logger,
+                      args = args
+                      )
     trainer.train()
 
-    logger.info('###################  Evaluation  ##################' )
-    tester = Tester(cfg=cfg['tester'],
-                    model=model,
-                    dataloader=test_loader,
-                    logger=logger)
-    tester.test()
+    # logger.info('###################  Evaluation  ##################' )
+    # tester = Tester(cfg=cfg['tester'],
+    #                 model=model,
+    #                 dataloader=test_loader,
+    #                 logger=logger)
+    # tester.test()
 
 
 if __name__ == '__main__':

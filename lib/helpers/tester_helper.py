@@ -63,7 +63,7 @@ class Tester(object):
         dataset = self.dataloader.dataset
         class_names = dataset.class_name
 
-        output_path = '/root/data/czy/czy_code/CaDDN/experiments/example/rgb_outputs/data'
+        output_path = self.cfg['output_path']
 
         if os.path.exists(output_path):
             shutil.rmtree(output_path, True)

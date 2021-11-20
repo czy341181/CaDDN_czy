@@ -249,7 +249,7 @@ class KITTI_Dataset(data.Dataset):
             annos.append(single_pred_dict)
 
             if output_path is not None:
-                cur_det_file = output_path +  '/' + ('%s.txt' % frame_id)
+                cur_det_file = output_path +  '/' + ('%06d.txt' % frame_id)
                 with open(cur_det_file, 'w') as f:
                     bbox = single_pred_dict['bbox']
                     loc = single_pred_dict['location']

@@ -35,7 +35,8 @@ def load_checkpoint(model, optimizer, filename, map_location, logger=None):
         checkpoint = torch.load(filename)
         epoch = checkpoint.get('epoch', -1)
         if model is not None and checkpoint['model_state'] is not None:
-            model.load_state_dict(checkpoint['model_state'])
+            model.load_state_dict({k[7:]: v for k, v in checkpoint['model_state'].items()})
+            #model.load_state_dict(checkpoint['model_state'])
         if optimizer is not None and checkpoint['optimizer_state'] is not None:
             optimizer.load_state_dict(checkpoint['optimizer_state'])
             for state in optimizer.state.values():
