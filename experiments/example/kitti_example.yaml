@@ -138,7 +138,8 @@ trainer:
   max_epoch: 80
   gpu_ids: 2,3
   save_frequency: 1 # checkpoint save interval (in epoch)
-  #resume_model: '/data1/czy/3D/czy_code/CaDDN_czy/experiments/example/checkpoints/checkpoint_epoch_63.pth'
+  eval_frequency: 10
+  #resume_model: '/data1/czy/3D/czy_code/CaDDN_czy/experiments/example/checkpoints_pretrain/checkpoint_epoch_29.pth'
 
 
 tester:

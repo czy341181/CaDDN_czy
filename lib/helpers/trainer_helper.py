@@ -108,13 +108,20 @@ class Trainer(object):
 
 
             # save trained model
-            if (self.epoch>60) and (self.epoch % self.cfg['save_frequency']) == 0:
+            if (self.epoch % self.cfg['save_frequency']) == 0:
                 os.makedirs('checkpoints', exist_ok=True)
                 ckpt_name = os.path.join('checkpoints', 'checkpoint_epoch_%d' % self.epoch)
 
                 if self.args.local_rank == 0:
                     save_checkpoint(get_checkpoint_state(self.model, self.optimizer, self.epoch), ckpt_name)
-                #self.inference()
+
+            if (self.epoch % self.cfg['eval_frequency']) == 0:
+                if self.args.local_rank == 0:
+                    self.inference()
+
+            elif (self.max_epoch >self.cfg['max_epoch']-10):
+                if self.args.local_rank == 0:
+                    self.inference()
 
             progress_bar.update()
 
